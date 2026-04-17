@@ -6,6 +6,7 @@ import static core.basesyntax.service.RegistrationServiceImpl.MIN_PASSWORD_LENGT
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import core.basesyntax.db.Storage;
 import core.basesyntax.model.User;
@@ -28,6 +29,7 @@ class RegistrationServiceTest {
         assertNotNull(registered);
         assertEquals("validLogin", registered.getLogin());
         assertEquals("validPassword", registered.getPassword());
+        assertTrue(Storage.people.contains(registered), "User should be saved in Storage");
     }
 
     @Test
@@ -96,5 +98,48 @@ class RegistrationServiceTest {
         Storage.people.add(user);
         assertThrows(InvalidUserDataException.class, () ->
                 registrationService.register(second));
+    }
+
+    @Test
+    void register_slightlyAboveBoundary_ok() {
+        User user = new User("a".repeat(MIN_LOGIN_LENGTH + 2),
+                "b".repeat(MIN_PASSWORD_LENGTH + 2), MIN_AGE + 1);
+        assertNotNull(registrationService.register(user));
+    }
+
+    @Test
+    void register_shortLoginBoundary_notOk() {
+        User user = new User("a".repeat(MIN_LOGIN_LENGTH - 1), "password", 20);
+        assertThrows(InvalidUserDataException.class, () -> registrationService.register(user));
+    }
+
+    @Test
+    void register_emptyLogin_notOk() {
+        User user = new User("", "password", 20);
+        assertThrows(InvalidUserDataException.class, () -> registrationService.register(user));
+    }
+
+    @Test
+    void register_threeCharLogin_notOk() {
+        User user = new User("abc", "password", 20);
+        assertThrows(InvalidUserDataException.class, () -> registrationService.register(user));
+    }
+
+    @Test
+    void register_shortPasswordBoundary_notOk() {
+        User user = new User("validLogin", "b".repeat(MIN_PASSWORD_LENGTH - 1), 20);
+        assertThrows(InvalidUserDataException.class, () -> registrationService.register(user));
+    }
+
+    @Test
+    void register_negativeAge_notOk() {
+        User user = new User("validLogin", "validPass", -1);
+        assertThrows(InvalidUserDataException.class, () -> registrationService.register(user));
+    }
+
+    @Test
+    void register_underAgeBoundary_notOk() {
+        User user = new User("validLogin", "validPass", MIN_AGE - 1);
+        assertThrows(InvalidUserDataException.class, () -> registrationService.register(user));
     }
 }
